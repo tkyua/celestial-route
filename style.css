@@ -289,7 +289,7 @@ main,
 .records[open] { padding-bottom: 12px; }
 #cockpit > .eyebrow, #report > .eyebrow { margin: 23px 0 0; }
 #flight-title, #report-title { margin: 5px 0 17px; }
-.instruments { align-self: start; }
+.settings, .instruments { align-self: start; }
 #timer { font-size: clamp(42px, 12vw, 68px); }
 #flight-route { overflow-wrap: anywhere; }
 @media (min-width: 780px) {
