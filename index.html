@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11132c">
+  <title>天体航路 | 集中タイマー</title>
+  <meta name="description" content="好きな乗組員を選び、ドット絵の宇宙を旅する集中タイマー。">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+  <script src="deck.js" defer></script>
+  <script src="navigation.js" defer></script>
+</head>
+<body>
+  <main id="app" data-screen="space">
+    <header class="top">
+      <button type="button" id="nav-toggle" class="wordmark" aria-label="ショートカットを開く" aria-haspopup="dialog" aria-controls="navigation-drawer" aria-expanded="false">
+        <svg class="brand-star" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+          <path fill="currentColor" d="M7 1h2v2h1v2h2v1h1v1h2v2h-2v1h-1v1h-2v2H9v2H7v-2H6v-2H4v-1H3V9H1V7h2V6h1V5h2V3h1z"/>
+          <path fill="#e2fff6" d="M7 5h2v6H7zM5 7h6v2H5z"/>
+        </svg>
+      </button>
+    </header>
+
+    <section id="space" aria-label="宇宙">
+      <canvas id="space-sky" width="144" height="256" aria-hidden="true"></canvas>
+      <button type="button" id="board" aria-label="ロケットに乗る">
+        <svg class="rocket-fallback" width="96" height="114" viewBox="0 0 16 19"
+             aria-hidden="true" shape-rendering="crispEdges">
+          <path fill="#a4afff" d="M7 2h2v1h1v1h1v6h1v1h1v2H3v-2h1v-1h1V4h1V3h1z"/>
+          <path fill="#f7efff" d="M6 4h4v7H6z"/>
+          <path fill="#74d4eb" d="M7 6h2v2H7z"/>
+          <path fill="#f78b71" d="M7 13h2v2H7z"/>
+          <path fill="#ffde8c" d="M7 15h1v1H7z"/>
+        </svg>
+        <canvas id="rocket" width="32" height="38" aria-hidden="true"></canvas>
+      </button>
+      <p class="space-hint"><span aria-hidden="true">⌁</span> ロケットを押して乗り込む</p>
+      <p class="launch-help">アプリを読み込めませんでした。ページを再読み込みしてください。</p>
+    </section>
+
+    <section id="hangar" hidden>
+      <div class="cabin-top">
+        <button type="button" id="exit-cabin" class="back-button">‹ 宇宙へ</button>
+        <span class="eyebrow">01 / CABIN</span>
+      </div>
+      <div class="work-grid">
+        <div class="crew-station">
+          <div class="cabin-view">
+            <canvas id="cabin-art" class="scene" width="180" height="110" aria-hidden="true"></canvas>
+            <button id="open-deck" type="button">船内をのぞく <span aria-hidden="true">↗</span></button>
+            <button id="cabin-react" type="button" aria-label="乗組員のリアクションを見る"></button>
+            <span class="cabin-label">CREW BAY</span>
+          </div>
+          <h1 id="cabin-title" tabindex="-1">乗組員を選ぶ</h1>
+          <div id="crew" class="crew" role="group" aria-label="乗組員"></div>
+        </div>
+
+        <div class="panel settings">
+          <p class="eyebrow panel-code">02 / FLIGHT PLAN</p>
+          <h2 class="panel-title">フライトの準備</h2>
+          <label for="task">担当する活動</label>
+          <input id="task" maxlength="24" placeholder="例：英語の勉強">
+          <p id="mission" class="muted"></p>
+
+          <form id="flight-form">
+            <label for="minutes">取り組む時間（分）</label>
+            <div class="presets">
+              <button type="button" data-minutes="10">10分</button>
+              <button type="button" data-minutes="25">25分</button>
+              <button type="button" data-minutes="45">45分</button>
+              <input id="minutes" aria-label="時間を入力（1〜120分）" type="number"
+                     min="1" max="120" step="1" value="25" inputmode="numeric" required>
+            </div>
+            <label for="music">船内BGM</label>
+            <select id="music">
+              <option value="off">無音</option>
+              <option value="retro">レトロゲーム風</option>
+              <option value="calm">静かな宇宙</option>
+            </select>
+            <button class="primary wide" type="submit">スタート <span aria-hidden="true">↗</span></button>
+          </form>
+        </div>
+      </div>
+      <details id="records" class="records">
+        <summary>天体図鑑と航海日誌</summary>
+        <section id="atlas-screen" aria-labelledby="atlas-title">
+          <h2 id="atlas-title" tabindex="-1">天体図鑑 <span id="atlas-count"></span></h2>
+          <div id="atlas"></div>
+        </section>
+        <section id="logbook-screen" aria-labelledby="log-title">
+          <h2 id="log-title" tabindex="-1">航海日誌</h2>
+          <div class="route-chart">
+            <div class="route-heading">
+              <h3 id="map-title" tabindex="-1">銀河マップ</h3>
+              <span class="eyebrow">GALAXY MAP</span>
+            </div>
+            <p id="map-crew" class="muted"></p>
+            <div id="map-replay" class="map-replay" hidden>
+              <p id="map-replay-text" aria-live="polite"></p>
+              <button id="map-replay-close" type="button">現在の航路に戻る</button>
+            </div>
+            <div class="route-field" id="map-field">
+              <svg class="route-lines" viewBox="0 0 600 360" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <radialGradient id="galaxy-cloud">
+                    <stop stop-color="#b9b6ff" stop-opacity=".64"/>
+                    <stop offset=".25" stop-color="#7869e5" stop-opacity=".34"/>
+                    <stop offset=".65" stop-color="#39489b" stop-opacity=".16"/>
+                    <stop offset="1" stop-color="#39489b" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+                <g class="galaxy-orbits" transform="rotate(-13 300 183)">
+                  <ellipse cx="300" cy="183" rx="236" ry="114"/>
+                  <ellipse cx="300" cy="183" rx="184" ry="82"/>
+                  <ellipse cx="300" cy="183" rx="120" ry="52"/>
+                </g>
+                <ellipse cx="300" cy="183" rx="248" ry="94" transform="rotate(-13 300 183)"
+                         fill="url(#galaxy-cloud)"/>
+                <path class="galaxy-arm" d="M144 215 C178 159 324 121 379 157 S353 223 290 210 S265 175 309 175"/>
+                <path class="galaxy-arm" d="M456 149 C422 205 276 243 221 207 S247 141 310 154 S335 189 291 189"/>
+                <path class="galaxy-core" d="M297 171h6v9h9v6h-9v9h-6v-9h-9v-6h9z"/>
+                <g id="map-route">
+                  <path d="M110 110 Q165 59 258 65"/>
+                  <path d="M258 65 Q376 42 464 105"/>
+                  <path d="M464 105 Q557 163 493 245"/>
+                  <path d="M493 245 Q415 302 303 293"/>
+                  <path d="M303 293 Q181 305 107 252"/>
+                </g>
+                <g id="map-replay-route"></g>
+              </svg>
+              <div id="map-planets" role="group" aria-label="航路上の天体"></div>
+            </div>
+            <p id="map-detail" class="muted" aria-live="polite"></p>
+          </div>
+          <ul id="log"></ul>
+        </section>
+      </details>
+      <p id="storage-note" class="muted fine" role="status"></p>
+    </section>
+
+    <section id="deck" hidden aria-labelledby="deck-title">
+      <div class="deck-nav">
+        <button type="button" id="leave-deck" class="back-button">‹ フライト準備へ</button>
+        <span class="eyebrow">SHIP INTERIOR</span>
+      </div>
+      <div class="deck-heading">
+        <h1 id="deck-title" tabindex="-1">ロケットの中</h1>
+        <div class="deck-rooms" role="group" aria-label="船内の部屋">
+          <button type="button" data-room="cabin"><small>01</small> 操縦室</button>
+          <button type="button" data-room="observatory"><small>02</small> 観測室</button>
+        </div>
+      </div>
+      <div id="deck-scene" class="deck-scene" aria-label="船内の部屋">
+        <canvas id="deck-art" width="240" height="126" aria-hidden="true"></canvas>
+        <span id="deck-room-label" class="deck-room-label" aria-hidden="true"></span>
+        <button id="deck-observe" type="button" hidden><span aria-hidden="true">✧</span> 観測</button>
+        <div id="deck-residents" role="group" aria-label="部屋の乗組員"></div>
+        <p id="deck-empty" hidden>まだ誰もいません</p>
+      </div>
+      <div id="deck-tray" class="deck-tray">
+        <div class="deck-tray-head">
+          <div>
+            <h2>乗組員トレー</h2>
+            <p class="muted">部屋に入れた乗組員で出発できます。</p>
+          </div>
+          <button id="add-crew" type="button" aria-label="乗組員を追加">＋</button>
+        </div>
+        <div id="deck-roster" class="deck-roster" role="group" aria-label="乗組員の配置"></div>
+        <p id="deck-status" class="deck-status" role="status"></p>
+      </div>
+    </section>
+
+    <section id="cockpit" hidden>
+      <p id="flight-tag" class="eyebrow"></p>
+      <h1 id="flight-title" tabindex="-1">航行中</h1>
+      <div class="work-grid">
+        <canvas id="window" class="scene" width="180" height="146" role="img"
+                aria-label="操縦席の窓から流れていくドット絵の星空"></canvas>
+        <div class="panel instruments">
+          <p class="eyebrow panel-code">FLIGHT TIMER</p>
+          <p id="flight-task" class="muted"></p>
+          <output id="timer" role="timer" aria-live="off">00:00</output>
+          <progress id="progress" aria-label="今回の飛行の進み具合" max="1" value="0"></progress>
+          <p id="flight-route" class="muted"></p>
+          <div class="actions">
+            <button id="pause">休憩する</button>
+            <button id="mute">BGMをオフ</button>
+          </div>
+          <button id="abort" class="demo wide">飛行を中止</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="report" hidden>
+      <p class="eyebrow">MISSION REPORT</p>
+      <h1 id="report-title" tabindex="-1"></h1>
+      <div class="work-grid">
+        <canvas id="report-art" class="scene" width="180" height="94"
+                role="img" aria-label="航海報告のドット絵"></canvas>
+        <div class="panel report-card">
+          <p id="report-summary"></p>
+          <ul id="discoveries"></ul>
+          <p id="report-next" class="muted"></p>
+          <button id="home" class="primary wide">船内に戻る</button>
+        </div>
+      </div>
+    </section>
+
+    <dialog id="navigation-drawer" aria-label="ショートカット">
+      <div class="drawer-head">
+        <svg width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M7 1h2v2h1v2h2v1h1v1h2v2h-2v1h-1v1h-2v2H9v2H7v-2H6v-2H4v-1H3V9H1V7h2V6h1V5h2V3h1z"/></svg>
+        <button type="button" id="nav-close" aria-label="ショートカットを閉じる">×</button>
+      </div>
+      <button type="button" id="nav-flight" hidden>
+        <span>操縦席へ戻る</span>
+        <span id="nav-timer" aria-live="off"></span>
+      </button>
+      <nav aria-label="画面を移動">
+          <button type="button" data-destination="space"><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" fill-rule="evenodd" d="M7 1h2v3h3v2h3v3h-3v2H9v4H7v-4H4V9H1V6h3V4h3z"/></svg><span>宇宙</span></button>
+          <button type="button" data-destination="deck"><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" fill-rule="evenodd" d="M2 2h12v12H2zM4 4v8h8V4zM6 6h4v4H6z"/></svg><span>船内</span></button>
+          <button type="button" data-destination="hangar"><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" fill-rule="evenodd" d="M7 1h2v2h2v7h2v3h-3v-2H6v2H3v-3h2V3h2zM7 4v3h2V4zM7 13h2v2H7z"/></svg><span>出発準備</span></button>
+          <button type="button" data-destination="atlas-screen"><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" fill-rule="evenodd" d="M5 3h6v1h2v2h1v4h-1v2h-2v1H5v-1H3v-2H2V6h1V4h2zM0 10h3v2H0zM13 4h3v2h-3z"/></svg><span>天体図鑑</span></button>
+          <button type="button" data-destination="logbook-screen"><svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" fill-rule="evenodd" d="M3 1h9l2 2v12H3zM5 3v10h7V4h-2V3zM6 6h4v1H6zM6 9h4v1H6z"/></svg><span>航海日誌</span></button>
+      </nav>
+    </dialog>
+
+    <dialog id="planet-dialog" aria-labelledby="planet-title">
+      <div class="planet-dialog-head">
+        <div>
+          <p class="eyebrow">OBSERVATION WINDOW</p>
+          <h2 id="planet-title"></h2>
+        </div>
+        <form method="dialog">
+          <button class="planet-close" aria-label="観測画面を閉じる">×</button>
+        </form>
+      </div>
+      <canvas id="planet-preview" class="scene" width="120" height="86" aria-hidden="true"></canvas>
+      <p id="planet-status" class="planet-status"></p>
+      <p id="planet-progress" class="muted"></p>
+    </dialog>
+
+    <dialog id="crew-catalog" aria-labelledby="crew-catalog-title">
+      <div class="planet-dialog-head">
+        <div>
+          <p class="eyebrow">CREW ROSTER</p>
+          <h2 id="crew-catalog-title">乗組員を追加</h2>
+        </div>
+        <form method="dialog">
+          <button class="planet-close" aria-label="閉じる">×</button>
+        </form>
+      </div>
+      <div id="crew-catalog-list" class="deck-roster"></div>
+    </dialog>
+
+    <dialog id="abort-dialog">
+      <h2>飛行を中止しますか？</h2>
+      <p>今回の時間は航海記録に加算されません。</p>
+      <form method="dialog" class="actions">
+        <button value="keep" autofocus>飛行に戻る</button>
+        <button value="stop">中止する</button>
+      </form>
+    </dialog>
+  </main>
+</body>
+</html>
